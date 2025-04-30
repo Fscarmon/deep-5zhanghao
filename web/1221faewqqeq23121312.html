@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            text-align: center;
+        }
+
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        p {
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h2>网页保活大师</h2>
+
+<table>
+    <tr>
+        <th>变量或文件名</th>
+        <th>用法</th>
+    </tr>
+
+     <tr>
+        <td>NEZHA_SERVER</td>
+        <td>哪吒服务器</td>
+    </tr>
+    <tr>
+        <td>NEZHA_KEY</td>
+        <td>哪吒密钥</td>
+    </tr>
+    <tr>
+        <td>NEZHA_PORT</td>
+        <td>哪吒端口(默认443）</td>
+    </tr>
+    <tr>
+        <td>NEZHA_TLS</td>
+        <td>哪吒开启tls（默认为1，开启）</td>
+    </tr>
+    <tr>
+        <td>GH_PAT</td>
+        <td>github仓库个人密钥，此变量是为了读取仓库链接，如果设置了上面的BAOHUO_URL，不要设置此变量，</td>
+    </tr>
+    <tr>
+        <td>GH_REPO</td>
+        <td>github私密仓库链接，格式:github.com/xx/xx.git,配合上面的GH_PAT读取仓库链接</td>
+    </tr>
+    <tr>
+        <td>url.yaml</td>
+        <td>仓库文件，存储保活链接（http://xx)，每行一个，适合glitch类，24小时不间断保活</td>
+    </tr>
+    <tr>
+        <td>url1.yaml</td>
+        <td>仓库文件，存储保活链接（http://xx)，每行一个，可设置TIME1变量控制停止保活时间，TIME1默认设置2,5,表示北京时间2到5点</td>
+    </tr>
+    <tr>
+        <td>url2.yaml</td>
+        <td>仓库文件，存储保活链接（http://xx)，每行一个，可设置TIME2变量控制停止保活时间，TIME2默认设置0,6,表示北京时间0到6点</td>
+    </tr>
+    <tr>
+        <td>url3.yaml</td>
+        <td>仓库文件，存储保活链接（http://xx)，每行一个，可设置TIME3变量控制停止保活时间，TIME3默认设置1,6,表示北京时间1到6点</td>
+    </tr>
+
+<h3>说明：仓库存放url.yaml，url1.yaml，url2.yaml，url3.yaml每行一个链接，可加#备注</h3>
+</table>
+</body>
+</html>
