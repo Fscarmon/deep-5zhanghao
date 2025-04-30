@@ -30,15 +30,20 @@ nohup nginx -c /app/nginx.conf -g 'daemon off;' >/dev/null 2>&1 &
 while true; do
     # 获取北京时间的小时（24小时制，0-23）
     HOUR=$(TZ='Asia/Shanghai' date +%H)
+    STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+
+    echo "Status code for URL: $STATUS_CODE"
+
+# Check if status code is 200
+if [ "$STATUS_CODE" -eq 200 ]; then
+    echo "Success! The URL returned HTTP 200 OK"
     
-    # 只在小时不是0到5之间（包括0和5）时运行
+else
     if [ $HOUR -ge 6 ] && [ $HOUR -le 23 ]; then
         python3 ./deep.py
     fi
-    
-    # 等待2分钟后再次检查
-    echo "Waiting for the next run..."
-    sleep 120
+fi   
+    sleep 10
 done
 
 #tail -f /dev/null
