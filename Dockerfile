@@ -17,7 +17,6 @@ WORKDIR /app
 COPY entrypoint.sh nginx.conf /app/
 COPY web/ /app/web/
 COPY deep.py /app/
-COPY deepnote_cookies.json /app/
 
 # 安装系统依赖和 Playwright 与 Firefox
 RUN apt-get update && \
