@@ -44,7 +44,7 @@ RUN apt-get update && \
     libatk-bridge2.0-0 \
     libgtk-3-0 \
     libasound2 && \
-    pip3 install playwright pytz pyyaml && \
+    pip3 install playwright && \
     playwright install --with-deps firefox && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
