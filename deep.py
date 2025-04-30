@@ -3,7 +3,7 @@ import os
 import time
 import json
 from pathlib import Path
-from playwright.sync_api import Playwright, sync_playwright, TimeoutError
+from playwright.sync_api import Playwright, sync_playwright, expect, TimeoutError
 
 def login_with_cookie_or_password(page, context, username, password):
     """先尝试cookie登录，失败后执行密码登录流程"""
@@ -17,10 +17,12 @@ def login_with_cookie_or_password(page, context, username, password):
             with open(cookie_file, "r") as f:
                 cookies = json.load(f)
             context.add_cookies(cookies)
+            print("已加载cookies")
             
             # 通过导航到登录页面测试cookies是否有效
             if page.url != "https://deepnote.com/sign-in":
-                page.goto("https://deepnote.com/sign-in", wait_until="domcontentloaded")
+                page.goto("https://deepnote.com/sign-in")
+                print("已导航到DeepNote登录页面")
             
             # 等待看是否重定向到工作区
             try:
@@ -29,6 +31,8 @@ def login_with_cookie_or_password(page, context, username, password):
                 if re.match(r"https://deepnote.com/workspace/.*", current_url):
                     print("Cookie登录成功，导航到工作区")
                     cookie_login_successful = True
+                else:
+                    print("Cookie登录可能失败，URL不匹配工作区模式")
             except TimeoutError:
                 print("Cookie登录失败，URL未变更为工作区")
         except Exception as e:
@@ -42,152 +46,223 @@ def login_with_cookie_or_password(page, context, username, password):
         
         # 导航到DeepNote登录页面
         if page.url != "https://deepnote.com/sign-in":
-            page.goto("https://deepnote.com/sign-in", wait_until="domcontentloaded")
+            page.goto("https://deepnote.com/sign-in")
+            print("已导航到DeepNote登录页面")
+            # 等待页面完全加载
+            page.wait_for_load_state("networkidle", timeout=30000)
         
-        # 适当延迟确保页面元素加载
-        time.sleep(3)
+        # 等待登录选项加载
+        time.sleep(5)
         
-        # 尝试找到GitHub登录按钮
-        github_button = None
-        selectors = [
-            "text=Continue with GitHub",
-            "text=GitHub",
-            '//button[contains(., "GitHub")] | //a[contains(., "GitHub")]',
-            'button:has-text("GitHub")'
-        ]
-        
-        for selector in selectors:
+        # 尝试多种方法找到GitHub登录按钮
+        try:
+            # 方法1：通过文本精确匹配
+            github_button = page.get_by_text("Continue with GitHub", exact=True)
+            github_button.wait_for(state="visible", timeout=10000)
+            github_button.click()
+            print("点击GitHub登录按钮")
+        except TimeoutError:
             try:
-                if selector.startswith("text="):
-                    github_button = page.get_by_text(selector[5:])
-                elif selector.startswith("//"):
-                    github_button = page.locator(selector)
-                else:
-                    github_button = page.locator(selector)
-                
-                if github_button.is_visible(timeout=2000):
+                # 方法2：通过文本部分匹配
+                github_button = page.get_by_text("GitHub", exact=False)
+                github_button.wait_for(state="visible", timeout=10000)
+                github_button.click()
+                print("点击GitHub登录按钮")
+            except TimeoutError:
+                try:
+                    # 方法3：通过XPath查找包含GitHub的按钮或链接
+                    github_button = page.locator('//button[contains(., "GitHub")] | //a[contains(., "GitHub")]')
+                    github_button.wait_for(state="visible", timeout=10000)
                     github_button.click()
                     print("点击GitHub登录按钮")
-                    break
-            except:
-                continue
+                except TimeoutError:
+                    try:
+                        # 方法4：尝试通过角色查找按钮
+                        github_button = page.get_by_role("button", name=re.compile("GitHub", re.IGNORECASE))
+                        github_button.wait_for(state="visible", timeout=10000)
+                        github_button.click()
+                        print("点击GitHub登录按钮")
+                    except TimeoutError:
+                        print("无法找到GitHub登录按钮")
+        # 等待页面加载完成
+        page.wait_for_load_state("networkidle", timeout=30000)
+        time.sleep(5)
         
-        if github_button is None:
-            print("无法找到GitHub登录按钮")
-            return False
+        # 等待用户名字段并输入凭据
+        try:
+            # 尝试多种方式定位用户名输入框
+            try:
+                username_field = page.get_by_label("Username or email address")
+                username_field.wait_for(state="visible", timeout=10000)
+            except TimeoutError:
+                try:
+                    username_field = page.locator('input[name="login"]')
+                    username_field.wait_for(state="visible", timeout=10000)
+                except TimeoutError:
+                    username_field = page.locator('//input[@id="login_field"] | //input[contains(@placeholder, "username")]')
+                    username_field.wait_for(state="visible", timeout=10000)
             
-        # 等待页面导航完成
-        page.wait_for_load_state("domcontentloaded", timeout=10000)
-        time.sleep(2)
+            username_field.click()
+            username_field.fill(username)
+            print("已输入用户名")
+        except TimeoutError:
+            print("未找到用户名字段，但继续执行")
         
-        # 寻找并填写用户名
-        username_selectors = [
-            'input[name="login"]',
-            '#login_field',
-            'input[placeholder*="username"]'
-        ]
-        
-        for selector in username_selectors:
+        # 等待密码字段并输入凭据
+        try:
+            # 尝试多种方式定位密码输入框
             try:
-                username_field = page.locator(selector)
-                if username_field.is_visible(timeout=2000):
-                    username_field.fill(username)
-                    print("已输入用户名")
-                    break
-            except:
-                continue
-        
-        # 寻找并填写密码
-        password_selectors = [
-            'input[name="password"]',
-            '#password',
-            'input[type="password"]'
-        ]
-        
-        for selector in password_selectors:
-            try:
-                password_field = page.locator(selector)
-                if password_field.is_visible(timeout=2000):
-                    password_field.fill(password)
-                    print("已输入密码")
-                    break
-            except:
-                continue
+                password_field = page.get_by_label("Password")
+                password_field.wait_for(state="visible", timeout=10000)
+            except TimeoutError:
+                try:
+                    password_field = page.locator('input[name="password"]')
+                    password_field.wait_for(state="visible", timeout=10000)
+                except TimeoutError:
+                    password_field = page.locator('//input[@id="password"] | //input[@type="password"]')
+                    password_field.wait_for(state="visible", timeout=10000)
+            
+            password_field.click()
+            password_field.fill(password)
+            print("已输入密码")
+        except TimeoutError:
+            print("未找到密码字段，但继续执行")
         
         # 点击登录按钮
-        login_selectors = [
-            'button:has-text("Sign in")',
-            'input[value="Sign in"]',
-            '//button[contains(text(), "Sign in")]',
-            'form button[type="submit"]'
-        ]
-        
-        for selector in login_selectors:
-            try:
-                sign_in_button = page.locator(selector)
-                if sign_in_button.is_visible(timeout=2000):
-                    sign_in_button.click()
-                    print("已点击登录按钮")
-                    break
-            except:
-                continue
-        
-        # 等待登录后的导航
-        page.wait_for_load_state("domcontentloaded", timeout=15000)
-        
-        # 保存成功登录后的cookies
         try:
-            page.wait_for_url("**/workspace/**", timeout=10000)
+            # 尝试多种方式定位登录按钮
+            try:
+                sign_in_button = page.get_by_role("button", name="Sign in", exact=True)
+                sign_in_button.wait_for(state="visible", timeout=10000)
+            except TimeoutError:
+                try:
+                    sign_in_button = page.locator('input[value="Sign in"]')
+                    sign_in_button.wait_for(state="visible", timeout=10000)
+                except TimeoutError:
+                    try:
+                        sign_in_button = page.locator('//button[contains(text(), "Sign in")] | //input[@value="Sign in"]')
+                        sign_in_button.wait_for(state="visible", timeout=10000)
+                    except TimeoutError:
+                        sign_in_button = page.locator('form button[type="submit"]')
+                        sign_in_button.wait_for(state="visible", timeout=10000)
+            
+            sign_in_button.click()
+            print("已点击登录按钮")
+            
+            # 等待登录后的导航
+            page.wait_for_load_state("networkidle", timeout=30000)
+            print("登录完成，页面已加载")
+            
+            # 保存成功登录后的cookies
             cookies = context.cookies()
             with open(cookie_file, "w") as f:
                 json.dump(cookies, f)
             print("已将cookies保存到文件")
+            
         except TimeoutError:
-            print("登录可能失败，URL未变更为工作区")
+            print("未找到登录按钮或页面导航超时")
     
     # 检查最终登录状态
+    login_successful = False
     try:
-        page.wait_for_url("**/workspace/**", timeout=5000)
+        page.wait_for_url("**/workspace/**", timeout=10000)
         current_url = page.url
         if re.match(r"https://deepnote.com/workspace/.*", current_url):
             print("登录成功，导航到工作区")
-            return True
+            login_successful = True
         else:
             print("登录可能失败，URL未变更为工作区")
-            return False
     except TimeoutError:
         print("登录可能失败，URL未变更为工作区")
-        return False
+    
+    return login_successful
 
 def is_app_running(page):
-    """检查应用是否正在运行"""
+    """检查应用是否正在运行，要求同时满足：
+    1. 存在"Running"字样（大写R开头）
+    2. 存在停止按钮
+    """
     try:
-        running_text = page.locator("text=/Running/").first
-        return running_text.is_visible(timeout=3000)
-    except Exception:
+        # 等待页面加载
+        page.wait_for_load_state("networkidle", timeout=15000)
+        
+        # 条件1：检查是否存在"Running"文本（必须大写R开头）
+        running_text_found = False
+        try:
+            # 使用精确匹配大写开头的"Running"文本
+            running_text_elements = page.locator("text=/Running/")
+            running_text_elements.first.wait_for(state="visible", timeout=5000)
+            found_text = running_text_elements.first.text_content()
+            print(f"找到运行状态文本: '{found_text}'")
+            
+            # 验证找到的文本确实是大写R开头的"Running"
+            if found_text and "Running" in found_text:
+                running_text_found = True
+                print("找到'Running'文本")
+            else:
+                print("未找到'Running'文本")
+        except TimeoutError:
+            print("未找到'Running'文本")
+        
+        is_running = running_text_found
+        if is_running:
+            print("应用状态检查：运行中")
+        else:
+            print(f"应用状态检查：未运行")
+        
+        return is_running
+        
+    except Exception as e:
+        print(f"检查应用运行状态时出错")
         return False
 
 def try_click_run_button(page):
     """尝试点击Run按钮"""
-    run_selectors = [
-        'button:has-text("Run")', 
-        '//button[contains(text(), "Run")]',
-        'button:has-text("run")',
-        'button:has-text("Start")'
-    ]
-    
-    for selector in run_selectors:
+    try:
+        # 等待页面完全加载
+        page.wait_for_load_state("networkidle", timeout=30000)
+        
+        # 尝试多种方式定位Run按钮
+        run_button_found = False
+        
+        # 方法1：通过文本精确匹配
         try:
-            run_button = page.locator(selector)
-            if run_button.is_visible(timeout=2000):
+            run_button = page.get_by_text("Run", exact=True)
+            run_button.wait_for(state="visible", timeout=10000)
+            run_button.click()
+            run_button_found = True
+            print("点击了'Run'按钮")
+        except TimeoutError:
+            # 方法2：通过角色和名称
+            try:
+                run_button = page.get_by_role("button", name="Run")
+                run_button.wait_for(state="visible", timeout=5000)
                 run_button.click()
-                print("点击了运行按钮")
-                return True
-        except Exception:
-            continue
-    
-    print("未找到'Run'按钮")
-    return False
+                run_button_found = True
+                print("点击了'Run'按钮")
+            except TimeoutError:
+                # 方法3：通过XPath
+                try:
+                    run_button = page.locator('//button[contains(text(), "Run")] | //button[contains(@class, "run")]')
+                    run_button.wait_for(state="visible", timeout=5000)
+                    run_button.click()
+                    run_button_found = True
+                    print("点击了'Run'按钮")
+                except TimeoutError:
+                    # 方法4：尝试查找包含"run"或"start"的按钮（不区分大小写）
+                    try:
+                        run_button = page.locator('button:has-text("Run"), button:has-text("run"), button:has-text("Start")')
+                        run_button.wait_for(state="visible", timeout=5000)
+                        run_button.click()
+                        run_button_found = True
+                        print("点击了运行按钮")
+                    except TimeoutError:
+                        print("尝试了多种方法但未找到'Run'按钮")
+        
+        return run_button_found
+    except Exception as e:
+        print(f"尝试点击'Run'按钮时出错")
+        return False
 
 def run(playwright: Playwright) -> None:
     # 从环境变量获取凭据
@@ -196,36 +271,16 @@ def run(playwright: Playwright) -> None:
         username, password = credentials.split(' ', 1)
     except ValueError:
         print("错误: GT_PW环境变量设置不正确。格式应为'username password'")
-        return
+        username, password = "", ""  # 设置为空以继续脚本执行
     
     # 从环境变量获取URL
     url = os.environ.get('DEEP_URL', '')
     if not url:
         print("警告: DEEP_URL环境变量未设置。登录后将不导航。")
     
-    # 启动浏览器，降低性能需求
-    browser = playwright.firefox.launch(
-        headless=True,
-        firefox_user_prefs={
-            "browser.cache.disk.enable": False,
-            "browser.cache.memory.enable": False,
-            "browser.sessionhistory.max_entries": 2,
-            "media.autoplay.default": 5,  # 禁用自动播放
-            "image.animation_mode": "none",  # 禁用动画
-            "permissions.default.image": 2  # 禁用图片加载
-        }
-    )
-    context = browser.new_context(
-        viewport={"width": 800, "height": 600},  # 缩小默认视口
-        java_script_enabled=True,  # 必须启用JavaScript
-        is_mobile=False,
-        has_touch=False,
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/100.0"
-    )
-    
-    # 降低资源使用，减少请求
-    context.route("**/*.{png,jpg,jpeg,gif,svg,css,woff,woff2,ttf,otf}", lambda route: route.abort())
-    context.route("**/(analytics|tracker|telemetry|logging|stats)/**", lambda route: route.abort())
+    # 启动浏览器
+    browser = playwright.firefox.launch(headless=True)
+    context = browser.new_context()
     
     # 创建新页面
     page = context.new_page()
@@ -235,7 +290,7 @@ def run(playwright: Playwright) -> None:
         max_login_attempts = 3
         app_running = False
         
-        # 登录循环
+        # 使用新的登录函数（包含cookie和密码登录）
         while login_attempts < max_login_attempts and not app_running:
             login_attempts += 1
             print(f"登录尝试 {login_attempts}/{max_login_attempts}")
@@ -243,14 +298,15 @@ def run(playwright: Playwright) -> None:
             if not page or page.is_closed():
                 page = context.new_page()
             
-            # 执行登录
+            # 执行登录（先尝试cookie，再尝试密码）
             login_successful = login_with_cookie_or_password(page, context, username, password)
             
             if login_successful:
                 # 导航到指定URL（如果提供）
                 if url:
                     try:
-                        page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                        page.goto(url)
+                        page.wait_for_load_state("domcontentloaded", timeout=30000)
                         print(f"已导航到指定的deepnode保活链接")
                     except TimeoutError:
                         print(f"导航到deepnode保活链接时超时，但继续执行")
@@ -260,10 +316,10 @@ def run(playwright: Playwright) -> None:
                 
                 # 如果应用未运行，尝试点击"Run"按钮
                 if not app_running:
-                    try_click_run_button(page)
+                    click_success = try_click_run_button(page)
                     
                     # 检查应用是否正在运行
-                    time.sleep(10)  # 减少等待时间
+                    time.sleep(20)
                     app_running = is_app_running(page)
                 
                 if app_running:
@@ -281,13 +337,11 @@ def run(playwright: Playwright) -> None:
             print(f"脚本执行失败：在{max_login_attempts}次尝试后应用仍未运行")
     
     finally:
-        # 关闭浏览器
-        if 'page' in locals() and page and not page.is_closed():
+        # 始终关闭浏览器
+        if page and not page.is_closed():
             page.close()
-        if 'context' in locals() and context:
-            context.close()
-        if 'browser' in locals() and browser:
-            browser.close()
+        context.close()
+        browser.close()
         print("浏览器已关闭")
 
 if __name__ == "__main__":
