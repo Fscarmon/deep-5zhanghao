@@ -23,6 +23,7 @@ COPY deepnote_cookies.json /app/
 RUN apt-get update && \
     apt-get install -y \
     nginx \
+    curl \
     # Playwright 依赖
     libx11-6 \
     libx11-xcb1 \
