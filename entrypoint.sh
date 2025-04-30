@@ -32,15 +32,17 @@ while true; do
     HOUR=$(TZ='Asia/Shanghai' date +%H)
     STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
 
-    echo "Status code for URL: $STATUS_CODE"
-
 # Check if status code is 200
 if [ "$STATUS_CODE" -eq 200 ]; then
     echo "Success! The URL returned HTTP 200 OK"
     
 else
+    echo "Status code for URL: $STATUS_CODE"
     if [ $HOUR -ge 6 ] && [ $HOUR -le 23 ]; then
         python3 ./deep.py
+    else
+        echo "Not at runtime!"
+    
     fi
 fi   
     sleep 10
