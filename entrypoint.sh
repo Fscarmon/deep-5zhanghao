@@ -119,6 +119,20 @@ while true; do
       log_message "Not at runtime!"
     fi
   fi
-  
+  if [[ -n "${URL2}" ]]; then
+    STATUS_CODE2=$(curl -s -o /dev/null -w "%{http_code}" "$URL2")
+
+  if [ "$STATUS_CODE2" -eq 200 ]; then
+    log_message "Success! The URL returned HTTP 200 OK"
+  else
+    log_message "Status code for URL: $STATUS_CODE2"
+    if [ $HOUR -ge 6 ] && [ $HOUR -le 23 ]; then
+      log_message "Running deep2.py..."
+      python3 ./deep2.py
+    else
+      log_message "Not at runtime!"
+    fi
+   fi
+  fi
   sleep 10
 done
