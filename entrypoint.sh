@@ -109,7 +109,7 @@ while true; do
   STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
 
   if [ "$STATUS_CODE" -eq 200 ]; then
-    log_message "Success! The URL returned HTTP 200 OK"
+    log_message "Success! URL returned HTTP 200 OK"
   else
     log_message "Status code for URL: $STATUS_CODE"
     if [ $HOUR -ge 6 ] && [ $HOUR -le 23 ]; then
@@ -123,7 +123,7 @@ while true; do
     STATUS_CODE2=$(curl -s -o /dev/null -w "%{http_code}" "$URL2")
 
   if [ "$STATUS_CODE2" -eq 200 ]; then
-    log_message "Success! The URL returned HTTP 200 OK"
+    log_message "Success! URL2 returned HTTP 200 OK"
   else
     log_message "Status code for URL2: $STATUS_CODE2"
     if [ $HOUR -ge 6 ] && [ $HOUR -le 23 ]; then
