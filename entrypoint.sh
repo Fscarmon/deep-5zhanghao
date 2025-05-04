@@ -125,7 +125,7 @@ while true; do
   if [ "$STATUS_CODE2" -eq 200 ]; then
     log_message "Success! The URL returned HTTP 200 OK"
   else
-    log_message "Status code for URL: $STATUS_CODE2"
+    log_message "Status code for URL2: $STATUS_CODE2"
     if [ $HOUR -ge 6 ] && [ $HOUR -le 23 ]; then
       log_message "Running deep2.py..."
       python3 ./deep2.py
@@ -134,5 +134,5 @@ while true; do
     fi
    fi
   fi
-  sleep 10
+  sleep 5
 done
