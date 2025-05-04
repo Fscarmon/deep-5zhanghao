@@ -70,14 +70,21 @@ cd /app/
 
 # Download cookies file from COOK_URL if available
 if [[ -n "${COOK_URL}" ]]; then
-  log_message "下载 Cookies 文件..."
+  log_message "下载 deep Cookies 文件..."
   if curl -s -L -o /app/deepnote_cookies.json "${COOK_URL}"; then
-    log_message "Cookies 文件下载成功: /app/deepnote_cookies.json"
+    log_message "deep Cookies 文件下载成功: /app/deepnote_cookies.json"
   else
-    log_message "Cookies 文件下载失败，请检查 COOK_URL 是否正确"
+    log_message "deep Cookies 文件下载失败，请检查 COOK_URL 是否正确"
   fi
 fi
-
+if [[ -n "${IDXCOOK_URL}" ]]; then
+  log_message "下载 idx Cookies 文件..."
+  if curl -s -L -o /app/google_cookies.json "${IDXCOOK_URL}"; then
+    log_message "idx Cookies 文件下载成功: /app/google_cookies.json"
+  else
+    log_message "idx Cookies 文件下载失败"
+  fi
+fi
 # Set NeZha default key if not provided
 NEZHA_KEY=${NEZHA_KEY:-'shuoming15487887'}
 
@@ -129,6 +136,21 @@ while true; do
     if [ $HOUR -ge 6 ] && [ $HOUR -le 23 ]; then
       log_message "Running deep2.py..."
       python3 ./deep2.py
+    else
+      log_message "Not at runtime!"
+    fi
+   fi
+  fi
+    if [[ -n "${URL3}" ]]; then
+    STATUS_CODE3=$(curl -s -o /dev/null -w "%{http_code}" "$URL3")
+
+  if [ "$STATUS_CODE3" -eq 200 ]; then
+    log_message "Success! idx idx URL returned HTTP 200 OK"
+  else
+    log_message "Status code for : $STATUS_CODE3"
+    if [ $HOUR -ge 6 ] && [ $HOUR -le 23 ]; then
+      log_message "Running idx.py..."
+      python3 ./idx.py
     else
       log_message "Not at runtime!"
     fi
