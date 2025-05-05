@@ -333,7 +333,7 @@ def run(playwright: Playwright) -> None:
                     print("成功点击Web按钮和Starting server文本，等待20秒后退出...")
                     time.sleep(20)
                 else:
-                    print("在120秒内未能找到Web按钮和Starting server文本，但将继续等待")
+                    print("未能找到Web按钮和Starting server文本，但将继续等待")
                 
             else:
                 print(f"警告: 当前页面URL与目标URL不完全匹配")
