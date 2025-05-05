@@ -37,7 +37,7 @@ def refresh_page_and_wait(page, url, refresh_attempts=3, total_wait_time=240):
         if not (web_button_found and starting_server_found):
             print(f"刷新页面，第{refresh_count + 1}次尝试...")
             try:
-                page.goto(url, timeout=30000)
+                page.goto(url, timeout=60000)
                 page.wait_for_load_state("domcontentloaded", timeout=60000)
                 page.wait_for_load_state("networkidle", timeout=60000)
             except Exception as e:
