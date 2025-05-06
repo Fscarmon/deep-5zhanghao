@@ -17,7 +17,7 @@ is_process_running() {
 
 # Function to start NeZha
 start_nezha() {
-  log_message "启动 NeZha..."
+  log_message "启动 NIPC..."
   NEZHA_PORT=${NEZHA_PORT:-'443'}
   NEZHA_TLS=${NEZHA_TLS:-'1'}
   TLS_FLAG=""
@@ -28,9 +28,9 @@ start_nezha() {
   # Wait a moment to ensure process started
   sleep 2
   if is_process_running "./web/nez"; then
-    log_message "NeZha 成功启动"
+    log_message "NIPC 成功启动"
   else
-    log_message "NeZha 启动失败，请检查配置"
+    log_message "NIPC 启动失败，请检查配置"
   fi
 }
 
@@ -38,7 +38,7 @@ start_nezha() {
 ensure_nezha_running() {
   if [[ -n "${NEZHA_SERVER}" && -n "${NEZHA_KEY}" ]]; then
     if ! is_process_running "./web/nez"; then
-      log_message "NeZha 进程不存在，正在重新启动..."
+      log_message "NIPC 进程不存在，正在重新启动..."
       start_nezha
     fi
   fi
@@ -55,6 +55,23 @@ ensure_nginx_running() {
     else
       log_message "Nginx 重启失败，请检查配置"
     fi
+  fi
+}
+
+# Function to check if it's time to run idx.py based on Beijing time
+should_run_idx_scheduled() {
+  # Get Beijing time hour and minute
+  HOUR=$(TZ='Asia/Shanghai' date +%H)
+  MINUTE=$(TZ='Asia/Shanghai' date +%M)
+  
+  # Run at exact hours: 0, 6, 8, 10, 12, 14, 16, 18, 20, 22
+  # We check if minute is 0 to run exactly at the hour
+  if [[ "$MINUTE" == "00" && ("$HOUR" == "00" || "$HOUR" == "06" || "$HOUR" == "08" || "$HOUR" == "10" || 
+                             "$HOUR" == "12" || "$HOUR" == "14" || "$HOUR" == "16" || 
+                             "$HOUR" == "18" || "$HOUR" == "20" || "$HOUR" == "22") ]]; then
+    return 0  # True in bash
+  else
+    return 1  # False in bash
   fi
 }
 
@@ -100,6 +117,8 @@ nohup nginx -c /app/nginx.conf -g 'daemon off;' >/dev/null 2>&1 &
 
 # Keep track of last check time for process monitoring
 LAST_PROCESS_CHECK=$(date +%s)
+# Track when idx.py was last run by scheduled time
+LAST_IDX_SCHEDULED_RUN=""
 
 # Main monitoring loop
 while true; do
@@ -113,6 +132,18 @@ while true; do
 
   # Get Beijing time hour (24-hour format, 0-23)
   HOUR=$(TZ='Asia/Shanghai' date +%H)
+  CURRENT_HOUR_MINUTE=$(TZ='Asia/Shanghai' date +%H%M)
+  
+  # Check if it's time to run idx.py based on schedule
+  if should_run_idx_scheduled; then
+    # Only run if we haven't already run in this minute
+    if [[ "$LAST_IDX_SCHEDULED_RUN" != "$CURRENT_HOUR_MINUTE" ]]; then
+      log_message "2小时运行 idx.py"
+      python3 ./idx.py
+      LAST_IDX_SCHEDULED_RUN=$CURRENT_HOUR_MINUTE
+    fi
+  fi
+
   STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
 
   if [ "$STATUS_CODE" -eq 200 ]; then
