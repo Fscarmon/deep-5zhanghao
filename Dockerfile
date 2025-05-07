@@ -19,7 +19,7 @@ COPY web/ /app/web/
 COPY deep.py /app/
 COPY deep2.py /app/
 COPY idx.py /app/
-
+COPY run.sh /app/
 # 安装系统依赖和 Playwright 与 Firefox
 RUN apt-get update && \
     apt-get install -y \
@@ -50,7 +50,7 @@ RUN apt-get update && \
     playwright install --with-deps firefox && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    chmod a+x /app/entrypoint.sh /app/web/nez
+    chmod a+x /app/entrypoint.sh /app/web/nez /app/run.sh
 
 # 运行脚本
 CMD ["/app/entrypoint.sh"]
